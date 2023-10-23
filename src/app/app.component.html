@@ -1,4 +1,4 @@
-<div class="container">
-  <h1>Password Strength Checker</h1>
-  <app-password-strength></app-password-strength>
-</div>
+<h1>{{ title }}</h1>
+<form [formGroup]="form">
+  <app-password-strength formControlName="password"></app-password-strength>
+</form>

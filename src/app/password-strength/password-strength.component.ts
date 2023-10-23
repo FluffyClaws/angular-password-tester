@@ -1,51 +1,82 @@
-import { Component } from '@angular/core';
+import { Component, forwardRef } from '@angular/core';
+import {
+  ControlValueAccessor,
+  NG_VALUE_ACCESSOR,
+  FormControl,
+} from '@angular/forms';
+import { PasswordStrengthService } from '../services/password-strength.service';
 
 @Component({
   selector: 'app-password-strength',
   templateUrl: './password-strength.component.html',
   styleUrls: ['./password-strength.component.css'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PasswordStrengthComponent),
+      multi: true,
+    },
+  ],
 })
-export class PasswordStrengthComponent {
-  password: string = '';
-  section1Color: string = 'grey';
-  section2Color: string = 'grey';
-  section3Color: string = 'grey';
+export class PasswordStrengthComponent implements ControlValueAccessor {
+  passwordControl = new FormControl('');
+  sectionColors: string[] = ['grey', 'grey', 'grey'];
 
-  checkPasswordStrength() {
-    if (this.password.length === 0) {
-      this.section1Color = 'grey';
-      this.section2Color = 'grey';
-      this.section3Color = 'grey';
-    } else if (this.password.length < 8) {
-      this.section1Color = 'red';
-      this.section2Color = 'red';
-      this.section3Color = 'red';
-    } else if (/^([a-zA-Z]+|[!@#$%^&+=]+|[\d]+)$/.test(this.password)) {
-      this.section1Color = 'red';
-      this.section2Color = 'grey';
-      this.section3Color = 'grey';
-    } else {
-      const hasLetters = /[a-zA-Z]/.test(this.password);
-      const hasSymbols = /[!@#$%^&+=]/.test(this.password);
-      const hasNumbers = /[\d]/.test(this.password);
+  constructor(private passwordStrengthService: PasswordStrengthService) {
+    this.subscribeToPasswordChanges();
+  }
 
-      if (hasLetters && hasSymbols && hasNumbers) {
-        this.section1Color = 'green';
-        this.section2Color = 'green';
-        this.section3Color = 'green';
-      } else if (
-        (hasLetters && hasSymbols) ||
-        (hasLetters && hasNumbers) ||
-        (hasSymbols && hasNumbers)
-      ) {
-        this.section1Color = 'yellow';
-        this.section2Color = 'yellow';
-        this.section3Color = 'grey';
+  private subscribeToPasswordChanges(): void {
+    this.passwordControl.valueChanges.subscribe((value: string | null) => {
+      if (value) {
+        this.checkPasswordStrength(value);
       } else {
-        this.section1Color = 'red';
-        this.section2Color = 'grey';
-        this.section3Color = 'grey';
+        this.sectionColors = ['grey', 'grey', 'grey'];
       }
-    }
+      this.onChange(value);
+    });
+
+    this.passwordControl.statusChanges.subscribe((status) => {
+      if (status === 'INVALID' && !this.passwordControl.value) {
+        this.sectionColors = ['grey', 'grey', 'grey'];
+      }
+    });
+  }
+
+  onChange: any = () => {};
+  onTouched: any = () => {};
+
+  writeValue(value: any): void {
+    this.passwordControl.setValue(value, { emitEvent: false });
+  }
+
+  registerOnChange(fn: any): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: any): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    isDisabled ? this.passwordControl.disable() : this.passwordControl.enable();
+  }
+
+  private checkPasswordStrength(value: string): void {
+    const [section1, section2, section3] =
+      this.passwordStrengthService.checkPasswordStrength(value);
+    this.sectionColors = [section1, section2, section3];
+  }
+
+  get section1Color(): string {
+    return this.sectionColors[0];
+  }
+
+  get section2Color(): string {
+    return this.sectionColors[1];
+  }
+
+  get section3Color(): string {
+    return this.sectionColors[2];
   }
 }
